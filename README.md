@@ -1,6 +1,6 @@
 # Prompt Sidebar — AI Chat Extension
 
-A Chrome side-panel extension paired with a local FastAPI server that streams AI responses from multiple providers (NVIDIA, OpenRouter) and optionally persists conversations to MySQL.
+A Chrome side-panel extension paired with a local FastAPI server that streams AI responses from multiple providers (NVIDIA, OpenRouter), reads the current page content as context, and optionally persists conversations to MySQL.
 
 ---
 
@@ -14,9 +14,10 @@ A Chrome side-panel extension paired with a local FastAPI server that streams AI
 
 ```
 Chrome Extension (sidebar)
-        │  POST /chat  (prompt + provider)
+        │  POST /chat  (prompt + provider + page_html)
         ▼
 FastAPI Server (port 8000)
+        ├─ Cleans page HTML  →  strips nav/svg/dialogs, keeps content tags
         ├─ NVIDIA API   →  minimax-m2.7          (if NVIDIA_API_KEY set)
         └─ OpenRouter   →  tencent/hy3-preview    (if OPENROUTER_API_KEY set)
         │
@@ -26,21 +27,25 @@ MySQL / XAMPP  (ai_extension.conversations)
 ```
 
 1. You type a prompt in the browser sidebar and press **Send** (or `Ctrl+Enter`).
-2. The extension posts the prompt to the local server along with the selected provider.
-3. The server streams the AI response back token by token via Server-Sent Events.
-4. Each completed conversation is saved to MySQL (if connected).
-5. When you reopen the sidebar, the full chat history loads from the database.
+2. The extension captures `document.body.innerHTML` of the active tab and posts it along with the prompt and provider.
+3. The server strips the raw HTML down to content-only tags (removes `<nav>`, `<svg>`, `<dialog>`, `<script>` etc.) and injects it as a system message so the AI can see the page.
+4. The server streams the AI response back token by token via Server-Sent Events.
+5. Each completed conversation is saved to MySQL (if connected).
+6. When you reopen the sidebar, the full chat history loads from the database.
 
 ---
 
 ## Features
 
+- **Page context** — before every send the extension captures the active tab's HTML, the server strips it to bare content tags (removing `<nav>`, `<svg>`, `<dialog>`, `<button>`, `<footer>`, scripts, styles and all attributes), then injects it as a system message so the AI can answer questions about what you're viewing.
+- **Page capture indicator** — a status bar above the input shows `Page captured: N chars` (green) or `Page: no access` (grey) after each send.
 - **Multi-provider** — switch between NVIDIA and OpenRouter from a dropdown in the sidebar. A provider only appears if its API key is set in `.env`.
 - **Streaming responses** — tokens appear in real time with a blinking cursor.
 - **Persistent history** — conversations survive browser/server restarts via MySQL.
 - **Works without MySQL** — chat and streaming work fully without a database. History is simply not saved when MySQL is unavailable.
 - **Auto-reconnect** — if MySQL starts after the server, it reconnects automatically on the next request.
 - **DB status badge** — green `DB` in the header when connected, amber `No DB` when MySQL is offline.
+- **Request logging** — every chat request is logged to `logs/chat.log` with the raw HTML preview (first 3 000 chars), cleaned HTML, prompt, and URL. Log rotates at 10 MB.
 - **Chat UI** — user and AI bubbles with timestamps in Chrome's native Side Panel.
 - **Clear history** — wipes both the UI and the database in one click.
 
@@ -68,6 +73,8 @@ product/
 │   └── sidebar.js         # Fetch + SSE stream handler
 ├── assets/
 │   └── screenshot.png     # Extension screenshot
+├── logs/
+│   └── chat.log           # Auto-created; raw + cleaned HTML logged per request
 ├── server.py              # Entry point — runs uvicorn
 ├── CONTRIBUTING.md        # Guide for contributors
 ├── requirements.txt
@@ -215,11 +222,13 @@ Without MySQL:
   "char_count": 34,
   "timestamp":  "2026-05-07T12:00:00.000Z",
   "source_url": "https://example.com",
-  "provider":   "nvidia"
+  "provider":   "nvidia",
+  "page_html":  "<body innerHTML of the active tab — optional>"
 }
 ```
 
-`provider` defaults to `"nvidia"` if omitted. Use `"openrouter"` to route via OpenRouter.
+`provider` defaults to `"nvidia"` if omitted. Use `"openrouter"` to route via OpenRouter.  
+`page_html` is optional. When provided the server cleans it and prepends it as a system message; omit it or pass `null` to skip page context.
 
 ---
 
