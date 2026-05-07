@@ -8,6 +8,7 @@ class PromptPayload(BaseModel):
     timestamp:  str
     source_url: Optional[str] = ""
     provider:   Optional[str] = "nvidia"
+    page_html:  Optional[str] = None
 
 
 class ConversationRecord(BaseModel):

@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const modelBar      = document.getElementById('modelBar');
   const providerSelect= document.getElementById('providerSelect');
   const dbBadge       = document.getElementById('dbBadge');
+  const pageBar       = document.getElementById('pageBar');
+  const pageBarText   = document.getElementById('pageBarText');
 
   let toastTimer    = null;
   let isStreaming   = false;
@@ -139,12 +141,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     const sourceUrl = tabs[0]?.url ?? '';
 
+    let pageHtml = null;
+    try {
+      const [result] = await chrome.scripting.executeScript({
+        target: { tabId: tabs[0].id },
+        func: () => document.body.innerHTML,
+      });
+      pageHtml = result?.result ?? null;
+    } catch (_) {}
+
+    pageBar.style.display = '';
+    if (pageHtml) {
+      pageBar.className = 'page-bar captured';
+      pageBarText.textContent = `Page captured: ${pageHtml.length.toLocaleString()} chars`;
+      console.log('[PageCapture] document.body.innerHTML (%d chars):\n%s',
+        pageHtml.length, pageHtml.slice(0, 2000));
+    } else {
+      pageBar.className = 'page-bar no-access';
+      pageBarText.textContent = 'Page: no access (chrome:// or blocked)';
+    }
+
     const payload = {
       prompt,
       char_count:  prompt.length,
       timestamp:   new Date().toISOString(),
       source_url:  sourceUrl,
       provider:    activeProvider,
+      page_html:   pageHtml,
     };
 
     const aiBubble = appendStreamingAiBubble();

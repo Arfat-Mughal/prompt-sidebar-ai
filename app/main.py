@@ -1,10 +1,21 @@
+import logging
+import logging.handlers
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import database
 from app.routes import chat, history, providers
+
+Path("logs").mkdir(exist_ok=True)
+_file_handler = logging.handlers.RotatingFileHandler(
+    "logs/chat.log", maxBytes=10 * 1024 * 1024, backupCount=3, encoding="utf-8"
+)
+_file_handler.setFormatter(logging.Formatter("%(message)s"))
+logging.getLogger("app").addHandler(_file_handler)
+logging.getLogger("app").setLevel(logging.DEBUG)
 
 
 @asynccontextmanager

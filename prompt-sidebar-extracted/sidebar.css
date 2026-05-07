@@ -340,6 +340,28 @@ body {
   transform: none;
 }
 
+/* ── Page capture bar ────────────────────────────────── */
+.page-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 2px 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.page-bar.captured  { color: #15803d; }
+.page-bar.no-access { color: var(--text-muted); }
+
+.page-bar-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 /* ── Hint text ────────────────────────────────────────── */
 .hint {
   font-size: 11px;
