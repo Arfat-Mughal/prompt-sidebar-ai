@@ -1,22 +1,77 @@
-const CHAT_URL    = 'http://localhost:8000/chat';
-const HISTORY_URL = 'http://localhost:8000/history';
+const BASE_URL      = 'http://localhost:8000';
+const CHAT_URL      = `${BASE_URL}/chat`;
+const HISTORY_URL   = `${BASE_URL}/history`;
+const PROVIDERS_URL = `${BASE_URL}/providers`;
+const HEALTH_URL    = `${BASE_URL}/`;
 
 document.addEventListener('DOMContentLoaded', () => {
-  const textarea     = document.getElementById('promptInput');
-  const sendBtn      = document.getElementById('sendBtn');
-  const clearBtn     = document.getElementById('clearBtn');
-  const clearAllBtn  = document.getElementById('clearAllBtn');
-  const chatMessages = document.getElementById('chatMessages');
-  const emptyState   = document.getElementById('emptyState');
-  const charCountEl  = document.getElementById('charCount');
-  const toast        = document.getElementById('toast');
+  const textarea      = document.getElementById('promptInput');
+  const sendBtn       = document.getElementById('sendBtn');
+  const clearBtn      = document.getElementById('clearBtn');
+  const clearAllBtn   = document.getElementById('clearAllBtn');
+  const chatMessages  = document.getElementById('chatMessages');
+  const emptyState    = document.getElementById('emptyState');
+  const charCountEl   = document.getElementById('charCount');
+  const toast         = document.getElementById('toast');
+  const modelBar      = document.getElementById('modelBar');
+  const providerSelect= document.getElementById('providerSelect');
+  const dbBadge       = document.getElementById('dbBadge');
 
-  let toastTimer  = null;
-  let isStreaming = false;
+  let toastTimer    = null;
+  let isStreaming   = false;
+  let activeProvider = 'nvidia';
 
   // ── Boot ─────────────────────────────────────────────────
+  checkHealth();
+  loadProviders();
   loadHistory();
   textarea.focus();
+
+  // ── Health check + DB badge ──────────────────────────────
+  async function checkHealth() {
+    try {
+      const res  = await fetch(HEALTH_URL);
+      const data = await res.json();
+      const up   = data.db === 'connected';
+      dbBadge.textContent = up ? 'DB' : 'No DB';
+      dbBadge.className   = `db-badge visible ${up ? 'db-on' : 'db-off'}`;
+      dbBadge.title       = data.db_message || '';
+    } catch (_) {
+      dbBadge.textContent = 'Offline';
+      dbBadge.className   = 'db-badge visible db-off';
+      dbBadge.title       = 'Server not reachable';
+    }
+  }
+
+  // ── Load available providers from server ─────────────────
+  async function loadProviders() {
+    try {
+      const res = await fetch(PROVIDERS_URL);
+      if (!res.ok) return;
+      const providers = await res.json();
+
+      // Only show selector when more than one provider is configured
+      if (providers.length < 2) {
+        if (providers.length === 1) activeProvider = providers[0].id;
+        return;
+      }
+
+      providerSelect.innerHTML = '';
+      providers.forEach((p) => {
+        const opt = document.createElement('option');
+        opt.value       = p.id;
+        opt.textContent = `${p.name} — ${p.model}`;
+        providerSelect.appendChild(opt);
+      });
+
+      activeProvider = providers[0].id;
+      modelBar.style.display = '';
+
+      providerSelect.addEventListener('change', () => {
+        activeProvider = providerSelect.value;
+      });
+    } catch (_) {}
+  }
 
   // ── Input events ─────────────────────────────────────────
   textarea.addEventListener('input', () => {
@@ -43,9 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   clearAllBtn.addEventListener('click', async () => {
     if (!confirm('Clear all chat history?')) return;
-    try {
-      await fetch('http://localhost:8000/history', { method: 'DELETE' });
-    } catch (_) {}
+    try { await fetch(`${BASE_URL}/history`, { method: 'DELETE' }); } catch (_) {}
     chatMessages.innerHTML = '';
     showEmptyState();
   });
@@ -59,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!rows.length) { showEmptyState(); return; }
 
       hideEmptyState();
-      // rows are newest-first; render oldest-first
       rows.slice().reverse().forEach((row) => {
         appendUserBubble(row.prompt, row.created_at);
         if (row.response) appendAiBubble(row.response);
@@ -78,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
     isStreaming = true;
     sendBtn.disabled = true;
     hideEmptyState();
-
     appendUserBubble(prompt);
 
     textarea.value = '';
@@ -90,9 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const payload = {
       prompt,
-      char_count: prompt.length,
-      timestamp:  new Date().toISOString(),
-      source_url: sourceUrl,
+      char_count:  prompt.length,
+      timestamp:   new Date().toISOString(),
+      source_url:  sourceUrl,
+      provider:    activeProvider,
     };
 
     const aiBubble = appendStreamingAiBubble();
@@ -155,8 +207,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (timestamp) {
       const ts = document.createElement('span');
-      ts.className = 'msg-ts';
-      ts.textContent = formatTs(timestamp);
+      ts.className    = 'msg-ts';
+      ts.textContent  = formatTs(timestamp);
       bubble.appendChild(ts);
     }
 
@@ -165,47 +217,22 @@ document.addEventListener('DOMContentLoaded', () => {
     return bubble;
   }
 
-  // Used when rendering history (full text already known)
   function appendAiBubble(text) {
-    const wrap   = document.createElement('div');
-    wrap.className = 'msg-row msg-row--ai';
-
-    const avatar = document.createElement('div');
-    avatar.className = 'ai-avatar';
-    avatar.textContent = 'AI';
-
-    const bubble = document.createElement('div');
-    bubble.className = 'msg-bubble msg-bubble--ai';
+    const { wrap, bubble } = buildAiWrap();
     bubble.textContent = text;
-
-    wrap.appendChild(avatar);
-    wrap.appendChild(bubble);
     chatMessages.appendChild(wrap);
     return bubble;
   }
 
-  // Used for live streaming — returns a controller object
   function appendStreamingAiBubble() {
-    const wrap   = document.createElement('div');
-    wrap.className = 'msg-row msg-row--ai';
-
-    const avatar = document.createElement('div');
-    avatar.className = 'ai-avatar';
-    avatar.textContent = 'AI';
-
-    const bubble = document.createElement('div');
-    bubble.className = 'msg-bubble msg-bubble--ai';
+    const { wrap, bubble } = buildAiWrap();
 
     const cursor = document.createElement('span');
     cursor.className = 'stream-cursor';
     bubble.appendChild(cursor);
-
-    wrap.appendChild(avatar);
-    wrap.appendChild(bubble);
     chatMessages.appendChild(wrap);
 
     let accumulated = '';
-
     return {
       el: bubble,
       appendToken(token) {
@@ -220,10 +247,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  function buildAiWrap() {
+    const wrap   = document.createElement('div');
+    wrap.className = 'msg-row msg-row--ai';
+
+    const avatar = document.createElement('div');
+    avatar.className   = 'ai-avatar';
+    avatar.textContent = 'AI';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble msg-bubble--ai';
+
+    wrap.appendChild(avatar);
+    wrap.appendChild(bubble);
+    return { wrap, bubble };
+  }
+
   function showEmptyState() {
-    if (!document.getElementById('emptyState')) {
-      chatMessages.appendChild(emptyState);
-    }
+    if (!document.getElementById('emptyState')) chatMessages.appendChild(emptyState);
     emptyState.style.display = '';
   }
 
@@ -237,9 +278,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function formatTs(iso) {
-    try {
-      return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch { return ''; }
+    try { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
+    catch { return ''; }
   }
 
   function showToast(message) {

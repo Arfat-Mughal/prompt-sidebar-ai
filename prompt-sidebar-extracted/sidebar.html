@@ -23,12 +23,19 @@
       </svg>
       <span class="header-title">Prompt Assistant</span>
     </div>
+    <span id="dbBadge" class="db-badge" title="Database status"></span>
     <button id="clearAllBtn" class="icon-btn" title="Clear all history">
       <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M8 4h4M5 7h10l-1 10H6L5 7z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </button>
   </header>
+
+  <!-- Model selector — hidden until /providers returns 2+ options -->
+  <div class="model-bar" id="modelBar" style="display:none">
+    <span class="model-bar-label">Model</span>
+    <select id="providerSelect" class="model-select"></select>
+  </div>
 
   <!-- Chat messages area -->
   <main class="main" id="mainArea">

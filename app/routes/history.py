@@ -8,7 +8,7 @@ router = APIRouter()
 
 @router.get("/history", response_model=list[ConversationRecord])
 def get_history(limit: int = 50):
-    """Return recent conversations from MySQL, newest first."""
+    """Return recent conversations from MySQL, newest first. Returns [] if DB is offline."""
     try:
         return database.fetch_history(limit)
     except Exception as exc:
@@ -17,7 +17,9 @@ def get_history(limit: int = 50):
 
 @router.delete("/history")
 def clear_history():
-    """Delete all conversation records from MySQL."""
+    """Delete all conversation records. Returns status of the operation."""
+    if not database.is_available() and not database._ensure_connected():
+        return {"message": "Database not connected — nothing to clear", "deleted": 0}
     try:
         deleted = database.clear_history()
         return {"message": "History cleared", "deleted": deleted}

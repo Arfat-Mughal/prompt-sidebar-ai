@@ -7,6 +7,7 @@ class PromptPayload(BaseModel):
     char_count: int
     timestamp:  str
     source_url: Optional[str] = ""
+    provider:   Optional[str] = "nvidia"
 
 
 class ConversationRecord(BaseModel):

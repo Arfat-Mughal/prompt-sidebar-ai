@@ -71,6 +71,32 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* ── DB status badge ──────────────────────────────────── */
+.db-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.db-badge.visible   { opacity: 1; }
+.db-badge.db-on     { background: #dcfce7; color: #15803d; }
+.db-badge.db-off    { background: #fef3c7; color: #b45309; }
+
+.db-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 /* ── Icon button ──────────────────────────────────────── */
 .icon-btn {
   display: flex;
@@ -320,6 +346,44 @@ body {
   color: var(--text-muted);
   text-align: center;
   margin-top: 8px;
+}
+
+/* ── Model selector bar ───────────────────────────────── */
+.model-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: var(--bg-bubble);
+  border-bottom: 1px solid var(--border);
+}
+
+.model-bar-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.model-select {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  font-family: var(--font);
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.model-select:focus {
+  border-color: var(--accent);
 }
 
 /* ── Chat messages ────────────────────────────────────── */

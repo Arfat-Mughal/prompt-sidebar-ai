@@ -15,6 +15,7 @@ def get_connection() -> pymysql.connections.Connection:
         charset="utf8mb4",
         cursorclass=pymysql.cursors.DictCursor,
         autocommit=False,
+        connect_timeout=3,
     )
 
 
@@ -27,9 +28,10 @@ def is_available() -> bool:
     return _db_available
 
 
-# ── Init ──────────────────────────────────────────────────────────────────────
+# ── Init / reconnect ──────────────────────────────────────────────────────────
 
-def init_db() -> None:
+def init_db() -> bool:
+    """Create table if needed. Called on startup and on-demand when offline."""
     global _db_available
     try:
         conn = get_connection()
@@ -47,9 +49,20 @@ def init_db() -> None:
                 """)
             conn.commit()
         _db_available = True
-        print("  ✓ MySQL connected  →  ai_extension.conversations")
+        return True
     except Exception as exc:
-        print(f"  ✗ MySQL unavailable ({exc}) — running without persistence")
+        _db_available = False
+        return False
+
+
+def _ensure_connected() -> bool:
+    """Return True if DB is ready. Auto-reconnects if it was previously offline."""
+    if _db_available:
+        return True
+    connected = init_db()
+    if connected:
+        print("  ✓ MySQL reconnected  →  ai_extension.conversations")
+    return connected
 
 
 # ── Queries ───────────────────────────────────────────────────────────────────
@@ -60,7 +73,7 @@ def save_conversation(
     source_url: str,
     char_count: int,
 ) -> None:
-    if not _db_available:
+    if not _ensure_connected():
         return
     try:
         conn = get_connection()
@@ -78,29 +91,37 @@ def save_conversation(
 
 
 def fetch_history(limit: int = 50) -> list[dict]:
-    if not _db_available:
+    if not _ensure_connected():
         return []
-    conn = get_connection()
-    with conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """SELECT id, prompt, response, source_url, char_count,
-                          DATE_FORMAT(created_at, '%%Y-%%m-%%dT%%H:%%i:%%s') AS created_at
-                     FROM conversations
-                    ORDER BY id DESC
-                    LIMIT %s""",
-                (limit,),
-            )
-            return cur.fetchall()
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT id, prompt, response, source_url, char_count,
+                              DATE_FORMAT(created_at, '%%Y-%%m-%%dT%%H:%%i:%%s') AS created_at
+                         FROM conversations
+                        ORDER BY id DESC
+                        LIMIT %s""",
+                    (limit,),
+                )
+                return cur.fetchall()
+    except Exception as exc:
+        print(f"  DB read error: {exc}")
+        return []
 
 
 def clear_history() -> int:
-    if not _db_available:
+    if not _ensure_connected():
         return 0
-    conn = get_connection()
-    with conn:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM conversations")
-            affected = cur.rowcount
-        conn.commit()
-    return affected
+    try:
+        conn = get_connection()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM conversations")
+                affected = cur.rowcount
+            conn.commit()
+        return affected
+    except Exception as exc:
+        print(f"  DB clear error: {exc}")
+        return 0

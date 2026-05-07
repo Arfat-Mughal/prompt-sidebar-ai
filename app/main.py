@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app import database
-from app.routes import chat, history
+from app.routes import chat, history, providers
 
 
 @asynccontextmanager
@@ -29,12 +29,15 @@ app.add_middleware(
 
 app.include_router(chat.router)
 app.include_router(history.router)
+app.include_router(providers.router)
 
 
 @app.get("/")
 def health():
+    db_up = database.is_available()
     return {
-        "status": "running",
-        "db":     "connected" if database.is_available() else "unavailable",
-        "docs":   "http://localhost:8000/docs",
+        "status":      "running",
+        "db":          "connected" if db_up else "unavailable",
+        "db_message":  "History is being saved." if db_up else "MySQL offline — chat works, history will not be saved.",
+        "docs":        "http://localhost:8000/docs",
     }
