@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Prompt Sidebar Extension",
+  "version": "1.3",
+  "description": "A Chrome extension that provides a sidebar for writing prompts",
+  "permissions": ["activeTab", "tabs", "scripting", "storage", "sidePanel"],
+  "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "Open Prompt Sidebar"
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

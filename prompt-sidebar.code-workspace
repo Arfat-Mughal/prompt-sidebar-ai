@@ -1,0 +1,89 @@
+{
+  "folders": [
+    {
+      "name": "API — server.py",
+      "path": "."
+    },
+    {
+      "name": "Extension — Chrome sidebar",
+      "path": "./prompt-sidebar-extracted"
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder:API — server.py}/.venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/*.pyc": true,
+      ".venv": true
+    },
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "[javascript]": {
+      "editor.tabSize": 2
+    },
+    "[json]": {
+      "editor.tabSize": 2
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.black-formatter",
+      "ms-python.pylint",
+      "rangav.vscode-thunder-client"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Run API server",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder:API — server.py}/server.py",
+        "console": "integratedTerminal",
+        "justMyCode": true
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Install dependencies",
+        "type": "shell",
+        "command": "pip install -r requirements.txt",
+        "options": {
+          "cwd": "${workspaceFolder:API — server.py}"
+        },
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "shared"
+        }
+      },
+      {
+        "label": "Start API server",
+        "type": "shell",
+        "command": "python server.py",
+        "options": {
+          "cwd": "${workspaceFolder:API — server.py}"
+        },
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "presentation": {
+          "reveal": "always",
+          "panel": "dedicated"
+        },
+        "isBackground": true,
+        "problemMatcher": []
+      }
+    ]
+  }
+}
