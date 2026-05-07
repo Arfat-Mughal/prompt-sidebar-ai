@@ -4,6 +4,12 @@ A Chrome side-panel extension paired with a local FastAPI server that streams AI
 
 ---
 
+## Screenshot
+
+![Prompt Sidebar in action](assets/screenshot.png)
+
+---
+
 ## How it works
 
 ```
@@ -32,7 +38,7 @@ MySQL / XAMPP  (ai_extension.conversations)
 - **Multi-provider** — switch between NVIDIA and OpenRouter from a dropdown in the sidebar. A provider only appears if its API key is set in `.env`.
 - **Streaming responses** — tokens appear in real time with a blinking cursor.
 - **Persistent history** — conversations survive browser/server restarts via MySQL.
-- **Works without MySQL** — chat and streaming work fully offline from the database. History is simply not saved when MySQL is unavailable.
+- **Works without MySQL** — chat and streaming work fully without a database. History is simply not saved when MySQL is unavailable.
 - **Auto-reconnect** — if MySQL starts after the server, it reconnects automatically on the next request.
 - **DB status badge** — green `DB` in the header when connected, amber `No DB` when MySQL is offline.
 - **Chat UI** — user and AI bubbles with timestamps in Chrome's native Side Panel.
@@ -60,7 +66,10 @@ product/
 │   ├── sidebar.html       # Chat UI shell
 │   ├── sidebar.css        # Styles
 │   └── sidebar.js         # Fetch + SSE stream handler
+├── assets/
+│   └── screenshot.png     # Extension screenshot
 ├── server.py              # Entry point — runs uvicorn
+├── CONTRIBUTING.md        # Guide for contributors
 ├── requirements.txt
 ├── .env                   # Secret keys (never commit)
 └── .env.example           # Safe template
@@ -82,8 +91,9 @@ product/
 
 ### 1. Clone / open the project
 
-```
-cd product
+```bash
+git clone https://github.com/Arfat-Mughal/prompt-sidebar-ai.git
+cd prompt-sidebar-ai
 ```
 
 ### 2. Install Python dependencies
@@ -234,6 +244,21 @@ CREATE TABLE conversations (
 |----------|--------|
 | `Ctrl + Enter` | Send prompt |
 | Click a history bubble | Load that prompt back into the input |
+
+---
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide.
+
+**Ideas to work on:**
+- Markdown rendering in AI responses
+- Conversation context (send chat history with each request)
+- Export conversations as JSON / Markdown
+- Settings panel (temperature, system prompt)
+- Support for more providers (OpenAI, Anthropic, Gemini)
+
+Open an issue to discuss or submit a pull request directly.
 
 ---
 
